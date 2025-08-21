@@ -1,75 +1,116 @@
-import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { useFonts } from 'expo-font';
+import { useRouter } from 'expo-router';
+import React from 'react';
+import { Animated, Dimensions, Easing, FlatList, Pressable, SafeAreaView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useNoteStore } from '../../store/noteStore';
 
-import { HelloWave } from '@/components/HelloWave';
-import ParallaxScrollView from '@/components/ParallaxScrollView';
-import { ThemedText } from '@/components/ThemedText';
-import { ThemedView } from '@/components/ThemedView';
+const styles = StyleSheet.create({
+  container: { flex: 1, backgroundColor: '#f0f4f8' },
+  tabBar: { flexDirection: 'row', justifyContent: 'space-around', paddingTop: 40, backgroundColor: '#fff', borderBottomWidth: 1, borderColor: '#eee' },
+  tab: { paddingVertical: 12, paddingHorizontal: 24, borderRadius: 20 },
+  tabActive: { backgroundColor: '#4f8cff' },
+  tabText: { fontWeight: 'bold', color: '#222', fontFamily: 'ndot57' },
+  centeredContent: { flex: 1, justifyContent: 'center', alignItems: 'center' },
+  title: { fontSize: 28, fontWeight: 'bold', marginBottom: 10, color: '#4f8cff', fontFamily: 'ndot57' },
+  subtitle: { fontSize: 16, color: '#555', fontFamily: 'ndot57' },
+  taskList: { marginTop: 24, width: '100%' },
+  taskRow: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 8, padding: 10, marginBottom: 8, elevation: 1 },
+  taskText: { fontSize: 16, flex: 1, fontFamily: 'ndot57' },
+  taskDone: { textDecorationLine: 'line-through', color: '#aaa' },
+  emptyText: { textAlign: 'center', color: '#aaa', marginTop: 20, fontFamily: 'ndot57' },
+});
 
-export default function HomeScreen() {
+
+function HomeScreen() {
+  const tasks = useNoteStore((state) => state.tasks);
+  const router = useRouter();
+  const [fontsLoaded] = useFonts({ ndot57: require('../../assets/fonts/ndot57.ttf') });
+  if (!fontsLoaded) return null;
   return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
+    <SafeAreaView style={styles.container}>
+      <View style={styles.tabBar}>
+        <TouchableOpacity style={[styles.tab, styles.tabActive]} onPress={() => {}}>
+          <Text style={styles.tabText}>HOME</Text>
+        </TouchableOpacity>
+        <Pressable
+          style={({ pressed }) => [
+            styles.tab,
+            styles.tabActive,
+            pressed ? { backgroundColor: '#e0eaff', transform: [{ scale: 0.97 }] } : null,
+          ]}
+          onPress={() => router.push('/addnote')}
+        >
+          <Text style={styles.tabText}>ADD SCROLL</Text>
+        </Pressable>
+      </View>
+      <View style={styles.centeredContent}>
+        <Text style={styles.title}>Welcome to Scroll Note!</Text>
+        <Text style={styles.subtitle}>Tap ADD SCROLL to create or edit your tasks.</Text>
+        <FlatList
+          data={tasks}
+          keyExtractor={item => item.id}
+          renderItem={({ item }) => <ScrollingTaskText item={item} />}
+          ListEmptyComponent={<Text style={styles.emptyText}>No tasks yet. Add one!</Text>}
+          style={styles.taskList}
         />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
-      </ThemedView>
-    </ParallaxScrollView>
+      </View>
+    </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
-  },
-  reactLogo: {
-    height: 178,
-    width: 290,
-    bottom: 0,
-    left: 0,
-    position: 'absolute',
-  },
-});
+export default HomeScreen;
+
+// Marquee/scrolling text for each task
+type Task = { id: string; text: string; done: boolean };
+function ScrollingTaskText({ item }: { item: Task }) {
+  const windowWidth = Dimensions.get('window').width;
+  const text = (item.done ? '✓ ' : '') + item.text + '   ';
+  const [textWidth, setTextWidth] = React.useState(windowWidth);
+  const visibleWidth = windowWidth - 10;
+  const anim = React.useRef(new Animated.Value(-textWidth)).current;
+  const hasSetWidth = React.useRef(false);
+
+  React.useEffect(() => {
+    anim.setValue(-textWidth);
+    Animated.loop(
+      Animated.timing(anim, {
+        toValue: visibleWidth,
+        duration: 12000,
+        easing: Easing.linear,
+        useNativeDriver: true,
+      })
+    ).start();
+  }, [anim, textWidth, item.text, visibleWidth]);
+
+  return (
+    <View style={styles.taskRow}>
+      <View style={{ overflow: 'hidden', width: visibleWidth, flexDirection: 'row' }}>
+        <Animated.View
+          style={{
+            flexDirection: 'row',
+            transform: [{ translateX: anim }],
+          }}
+        >
+          <Text
+            style={[styles.taskText, item.done && styles.taskDone]}
+            onLayout={e => {
+              if (!hasSetWidth.current) {
+                setTextWidth(e.nativeEvent.layout.width);
+                hasSetWidth.current = true;
+              }
+            }}
+          >
+            {text}
+          </Text>
+          <Text
+            style={[styles.taskText, item.done && styles.taskDone]}
+          >
+            {text}
+          </Text>
+        </Animated.View>
+      </View>
+    </View>
+  );
+}
+
+
