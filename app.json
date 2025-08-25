@@ -4,7 +4,7 @@
     "slug": "ScrollNoteExpoApp",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/scroll.jpeg",
     "scheme": "scrollnoteexpoapp",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
